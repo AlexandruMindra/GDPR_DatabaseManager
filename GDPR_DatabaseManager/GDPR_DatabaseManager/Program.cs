@@ -8,8 +8,13 @@ namespace GDPR_DatabaseManager
 {
     class Program
     {
+
+        static Server ServerObj = new Server();
+
         static void Main(string[] args)
         {
+            ServerObj.Start();
+            Console.ReadKey(true);
         }
     }
 }
