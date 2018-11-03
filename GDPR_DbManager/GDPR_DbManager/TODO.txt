@@ -1,4 +1,5 @@
 ﻿1.	conexiune cu baza de date
+1.1	Autentificare in doi pasi
 2.	form2 - alegere baza de date si previzualizare cu buton de logout
 3.	protectie impotriva screenshot
 4.	minimizare automata pentru inactivitate 5 min
