@@ -199,12 +199,23 @@ namespace DbServer
 
                     WriteOnColor("================== Help ==================", ConsoleColor.Green , true);
                     Console.Write("show user                "); WriteOnColor("Show user's details", ConsoleColor.Magenta, true);
-                    Console.Write("list users             "); WriteOnColor("List users from database", ConsoleColor.Magenta, true);
+                    Console.Write("list users               "); WriteOnColor("List users from database", ConsoleColor.Magenta, true);
                     Console.Write("create client            "); WriteOnColor("Create a new client", ConsoleColor.Magenta, true);
+                    Console.Write("show logs                "); WriteOnColor("List the logs", ConsoleColor.Magenta, true);
                     Console.Write("Exit                     "); WriteOnColor("Exit the application", ConsoleColor.Magenta, true);
                     WriteOnColor("==========================================", ConsoleColor.Green, true); 
                     break;
 
+                case "show logs":
+                    using (var reader = new StreamReader(GetLogFilePath(), true))
+                    {
+                        string line;
+                        while ((line = reader.ReadLine()) != null)
+                        {
+                            WriteOnColor(line, ConsoleColor.DarkGreen, true);
+                        }
+                    }
+                    break;
                 default:
                     
                     break;
@@ -261,7 +272,6 @@ namespace DbServer
                             Data = "lginnf"
                         }));
                     }
-                        
                     break;
 
                 case Reason.Com:
