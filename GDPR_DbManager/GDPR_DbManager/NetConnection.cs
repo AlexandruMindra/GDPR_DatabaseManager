@@ -47,7 +47,7 @@ namespace GDPR_DbManager
         public void Connect(string hostname, int port)
         {
             CheckServerUsedAsClient();
-            CheckClientAlreadyConnected();
+            //CheckClientAlreadyConnected();
 
             client = new TcpClient();
             client.Connect(hostname, port);
@@ -59,7 +59,7 @@ namespace GDPR_DbManager
         public void Connect(IPAddress address, int port)
         {
             CheckServerUsedAsClient();
-            CheckClientAlreadyConnected();
+            //CheckClientAlreadyConnected();
 
             client = new TcpClient();
             client.Connect(address, port);

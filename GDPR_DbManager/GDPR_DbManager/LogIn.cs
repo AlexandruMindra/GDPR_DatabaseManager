@@ -88,8 +88,14 @@ namespace GDPR_DbManager
                 case Reason.Login:
                     break;
                 case Reason.Response:
+                    if (((string)ConvertedMessage.Data) == "lgins")
+                    {
+                        mainForm.ShowDialog();
+                    }
                     if (((string)ConvertedMessage.Data) == "lginf")
-                        userField.Text = "azsdxfchgvjhbjnkm";
+                        MessageBox.Show("Wrong password or auth code");
+                    if (((string)ConvertedMessage.Data) == "lginnf")
+                        MessageBox.Show("User not found");
                     break;
                 case Reason.Com:
                     break;
