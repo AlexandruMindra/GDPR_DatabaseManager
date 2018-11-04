@@ -72,12 +72,10 @@ namespace DbServer
                         WriteOnColor("--------------------------------", ConsoleColor.Blue, true);
                         Console.WriteLine("    User : " + user.account + Environment.NewLine +
                                           "Password : " + user.passwd   + Environment.NewLine +
-                                          "   Email : " + user.email + Environment.NewLine +
-                                          "    Code : " + user.code);
+                                          "   Email : " + user.email + Environment.NewLine);
                     }
                     break;
                 case "create client":
-
                     var newAccount = new User(); // New user to be added
                     goto Start;
 
@@ -133,7 +131,7 @@ namespace DbServer
                         {
                             GoogleTOTP tf = new GoogleTOTP();
                             newAccount.email = Email;
-                            newAccount.code = CreativeCommons.Transcoder.Base32Encode(tf.getPrivateKey());
+                            newAccount.code = tf.getPrivateKey();
                             UserDB.Add(newAccount.account, newAccount);
                             WriteOnColor("Client " + newAccount.account + " was created successfully!", ConsoleColor.Yellow, true);
                             break;
@@ -229,7 +227,7 @@ namespace DbServer
             Console.ResetColor();
         }
 
-        public static void AddUser(string acc, string pass, string em, string strKey)
+        public static void AddUser(string acc, string pass, string em, byte[] strKey)
         {
             UserDB.Add(acc, new User()
             {
@@ -301,7 +299,7 @@ namespace DbServer
     {
         public String account { get; set; }
         public String passwd { get; set; }
-        public String code { get; set; }
+        public byte[] code { get; set; }
         public String email { get; set; }
     }
 }
