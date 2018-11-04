@@ -12,13 +12,13 @@ namespace DbServer
     class Program
     {
         public static Dictionary<String, User> UserDB = new Dictionary<string, User>();
-        public static Dictionary<String, String> UserList = new Dictionary<string, string>();
+        public static Dictionary<String, String> EmailList = new Dictionary<string, string>();
         public static int port = 55555;
         public static NetConnection server = new NetConnection();
 
         static void Main(string[] args)
         {
-            AddUser("alex", "alex", "alex", "alexandrualexandru");
+            LoadData();
             server.OnConnect += server_onConect;
             server.OnDataReceived += server_OnDataReceived;
             server.OnDisconnect += server_OnDisconnect;
@@ -26,19 +26,9 @@ namespace DbServer
             server.Start(port);
             Console.WriteLine("Server start on port " + port);
 
-            while (true)
-            {
-                string cmd = Console.ReadLine();
-                switch (cmd)
-                {
-                    case "stop server":
-                        break;
-                    case "start server":
-                        break;
-                    default:
-                        break;
-                }
-            }
+            Console.ReadLine();
+            SaveData();
+
         }
 
         private static void server_OnDisconnect(object sender, NetConnection connection)
@@ -49,23 +39,37 @@ namespace DbServer
         private static void server_OnDataReceived(object sender, NetConnection connection, byte[] e)
         {
             NetworkData ReceivedData = (NetworkData)Convertor.ByteArrayToObject(e);
-            
             switch (ReceivedData.ComReason)
             {
                 case Reason.Login:
-                    GoogleTOTP tf = new GoogleTOTP();
-                    LoginData LoginCredentials = (LoginData)ReceivedData.Data;
-                    User client = SearchByUser(LoginCredentials.User);
-                    if (client.passwd == LoginCredentials.Password &&
-                        tf.GeneratePin(client.code) == LoginCredentials.Code)
+                    try
                     {
-                        Console.WriteLine("User " + LoginCredentials.User + " connected");
-                        server.Send(Encoding.UTF8.GetBytes("lgins"));
+                        GoogleTOTP tf = new GoogleTOTP();
+                        LoginData LoginCredentials = (LoginData)ReceivedData.Data;
+                        User client = UserDB[LoginCredentials.User];
+                        if (client.passwd == LoginCredentials.Password)
+                        {
+                            Console.WriteLine("User " + LoginCredentials.User + " connected");
+                            connection.Send(Tools.Convertor.ObjectToByteArray(new Tools.NetworkData()
+                            {
+                                ComReason = Tools.Reason.Response,
+                                Data = "lgins"
+                            }));
+                        }
+                        else
+                        {
+                            Console.WriteLine("User " + LoginCredentials.User + " failed to login");
+                            connection.Send(Tools.Convertor.ObjectToByteArray(new Tools.NetworkData()
+                            {
+                                ComReason = Tools.Reason.Response,
+                                Data = "lginf"
+                            }));
+                        }
+                        break;
                     }
-                    else
+                    catch (Exception ex)
                     {
-                        Console.WriteLine("User " + LoginCredentials.User + " failed to login");
-                        server.Send(Encoding.UTF8.GetBytes("lginf"));
+                        Console.WriteLine(ex.ToString());
                     }
                     break;
 
@@ -83,60 +87,70 @@ namespace DbServer
 
         public static void AddUser(string acc, string pass, string em, string strKey)
         {
-            UserDB.Add("key", new User()
+            UserDB.Add(acc, new User()
             {
                 account = acc,
                 passwd = pass,
                 email = em,
                 code = strKey
             });
-            UserList.Add(acc, "key");
+            EmailList.Add(em, acc);
         }
 
-        public static User SearchByUser(string account)
+        public static User SearchByEmail(string email)
         {
-            return UserDB[UserList[account]];
+            return UserDB[EmailList[email]];
         }
 
-        //public static void LoadData()
-        //{
-        //    var fileName = Path.Combine(Environment.GetFolderPath(
-        //    Environment.SpecialFolder.ApplicationData) + @"\Kozmo", "JRData.xml");
-        //    if (File.Exists(fileName))
-        //    {
-        //        XmlSerializer serializer = new XmlSerializer(typeof(List<DayData>));
-        //        StreamReader reader = new StreamReader(fileName);
-        //        List<DayData> data = (List<DayData>)serializer.Deserialize(reader);
-        //        reader.Close();
-        //        MyDays.AddRange(data);
-        //        // Clean
-        //        serializer = null;
-        //        reader = null;
-        //        data = null;
-        //    }
-        //    fileName = null;
-        //}
+        public static void LoadData()
+        {
+            var fileName = Path.Combine(Environment.GetFolderPath(
+            Environment.SpecialFolder.ApplicationData) + @"\GDPRDatabase", "Users.xml");
+            if (File.Exists(fileName))
+            {
+                XmlSerializer serializer = new XmlSerializer(typeof(List<User>));
+                StreamReader reader = new StreamReader(fileName);
+                List<User> data = (List<User>)serializer.Deserialize(reader);
+                reader.Close();
+                foreach (var user in data)
+                {
+                    UserDB.Add(user.account, user);
+                    EmailList.Add(user.email, user.account);
+                }
+                // Clean
+                serializer = null;
+                reader = null;
+                data = null;
+            }
+            fileName = null;
+        }
 
-        //public void SaveData()
-        //{
-        //    MyDays[NewFocusedPanel.TabIndex].DailyText = MyJournalText.Text;
-        //    string path = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + @"\Kozmo";
-        //    var fileName = Path.Combine(Environment.GetFolderPath(
-        //    Environment.SpecialFolder.ApplicationData) + @"\Kozmo", "JRData.xml");
-        //    if (!Directory.Exists(path))
-        //    {
-        //        Directory.CreateDirectory(path);
-        //    }
-        //    XmlSerializer serializer = new XmlSerializer(typeof(List<DayData>));
-        //    StreamWriter Writer = new StreamWriter(fileName);
-        //    serializer.Serialize(Writer, MyDays);
-        //    Writer.Close();
-        //    // cleanup
-        //    path = null;
-        //    serializer = null;
-        //    Writer = null;
-        //    fileName = null;
-        //}
+        public static void SaveData()
+        {
+            string path = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + @"\GDPRDatabase";
+            var fileName = Path.Combine(Environment.GetFolderPath(
+            Environment.SpecialFolder.ApplicationData) + @"\GDPRDatabase", "Users.xml");
+            if (!Directory.Exists(path))
+            {
+                Directory.CreateDirectory(path);
+            }
+            XmlSerializer serializer = new XmlSerializer(typeof(List<User>));
+            StreamWriter Writer = new StreamWriter(fileName);
+
+            List<User> ToSave = new List<User>();
+            foreach (var user in UserDB.Values)
+            {
+                ToSave.Add(user);
+            }
+
+            serializer.Serialize(Writer, ToSave);
+            Writer.Close();
+            // cleanup
+            path = null;
+            serializer = null;
+            Writer = null;
+            fileName = null;
+        }
     }
 
     public class User

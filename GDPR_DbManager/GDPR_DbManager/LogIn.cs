@@ -14,6 +14,7 @@ namespace GDPR_DbManager
     public partial class LogIn : Form
     {
         MainPanel mainForm = new MainPanel();
+        bool isConnected = false;
 
         public LogIn()
         {
@@ -25,12 +26,12 @@ namespace GDPR_DbManager
 
         private void client_onDisconnect(object sender, NetConnection connection)
         {
-            
+            isConnected = false;
         }
 
         private void client_onConnect(object sender, NetConnection connection)
         {
-
+            isConnected = true;
         }
 
         #region FieldChanges
@@ -61,8 +62,8 @@ namespace GDPR_DbManager
                 passwordField.TextLength != 0 &&
                 keyField.TextLength != 0)
             {
-                
-                mainForm.client.Connect("localhost", 55555);
+                if(!isConnected)
+                    mainForm.client.Connect("localhost", 55555);
                 mainForm.client.Send(Convertor.ObjectToByteArray(new Tools.NetworkData()
                 {
                     ComReason = Tools.Reason.Login,
@@ -80,18 +81,23 @@ namespace GDPR_DbManager
 
         private void Client_OnDataReceived(object sender, NetConnection connection, byte[] e)
         {
-            if (Encoding.UTF8.GetString(e) == "lginf")
-                userField.Text = "azsdxfchgvjhbjnkm";
-            //switch (Encoding.UTF8.GetString(e))
-            //{
-            //    case "lgins":
-            //        break;
-            //    case "lginf":
-            //        MessageBox.Show("Datele de conectare sunt gresite! Va rugam incercati din nou!", "Login Failed", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            //        break;
-            //    default:
-            //        break;
-            //}
+
+            var ConvertedMessage = (Tools.NetworkData)Tools.Convertor.ByteArrayToObject(e);
+            switch (ConvertedMessage.ComReason)
+            {
+                case Reason.Login:
+                    break;
+                case Reason.Response:
+                    if (((string)ConvertedMessage.Data) == "lginf")
+                        userField.Text = "azsdxfchgvjhbjnkm";
+                    break;
+                case Reason.Com:
+                    break;
+                default:
+                    break;
+            }
+
+            
 
         }
     }

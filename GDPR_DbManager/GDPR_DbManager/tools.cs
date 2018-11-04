@@ -20,6 +20,7 @@ namespace Tools
     public enum Reason
     {
         Login,
+        Response,
         Com,
     }
 
