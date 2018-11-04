@@ -9,6 +9,13 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using Tools;
 
+//////////erori....
+//////////Exception thrown: 'System.Runtime.Serialization.SerializationException' in mscorlib.dll
+//////////Exception thrown: 'System.ObjectDisposedException' in mscorlib.dll
+//////////Exception thrown: 'System.ObjectDisposedException' in GDPR_DbManager.exe
+//////////Exception thrown: 'System.Runtime.Serialization.SerializationException' in DbServer.exe
+//////////Exception thrown: 'System.IO.IOException' in mscorlib.dll
+//////////Exception thrown: 'System.IO.IOException' in DbServer.exe
 namespace GDPR_DbManager
 {
     public partial class LogIn : Form
@@ -24,15 +31,46 @@ namespace GDPR_DbManager
             mainForm.client.OnDisconnect += client_onDisconnect;
         }
 
+        #region ClientEvents
         private void client_onDisconnect(object sender, NetConnection connection)
         {
-            isConnected = false;
+                isConnected = false;
+                logInBtn.Enabled = true;
+                logoutBtn.Enabled = false;
+            
         }
 
         private void client_onConnect(object sender, NetConnection connection)
         {
             isConnected = true;
         }
+
+        private void Client_OnDataReceived(object sender, NetConnection connection, byte[] e)
+        {
+            var ConvertedMessage = (Tools.NetworkData)Tools.Convertor.ByteArrayToObject(e);
+            switch (ConvertedMessage.ComReason)
+            {
+                case Reason.Login:
+                    break;
+                case Reason.Response:
+                    if (((string)ConvertedMessage.Data) == "lgins")
+                    {
+                        logInBtn.Enabled = false;
+                        logoutBtn.Enabled = true;
+                        //mainForm.ShowDialog();
+                    }
+                    if (((string)ConvertedMessage.Data) == "lginf")
+                        MessageBox.Show("Wrong password or auth code");
+                    if (((string)ConvertedMessage.Data) == "lginnf")
+                        MessageBox.Show("User not found");
+                    break;
+                case Reason.Com:
+                    break;
+                default:
+                    break;
+            }
+        }
+        #endregion
 
         #region FieldChanges
         private void passwordField_TextChanged(object sender, EventArgs e)
@@ -59,11 +97,12 @@ namespace GDPR_DbManager
         private void logInBtn_Click(object sender, EventArgs e)
         {
             if (userField.TextLength != 0 &&
-                passwordField.TextLength != 0 &&
-                keyField.TextLength != 0)
+            passwordField.TextLength != 0 &&
+            keyField.TextLength != 0)
             {
-                if(!isConnected)
+                if (!isConnected)
                     mainForm.client.Connect("localhost", 55555);
+
                 mainForm.client.Send(Convertor.ObjectToByteArray(new Tools.NetworkData()
                 {
                     ComReason = Tools.Reason.Login,
@@ -74,35 +113,12 @@ namespace GDPR_DbManager
                         Code = keyField.Text
                     }
                 }));
-                
             }
-
         }
 
-        private void Client_OnDataReceived(object sender, NetConnection connection, byte[] e)
+        private void logoutBtn_Click(object sender, EventArgs e)
         {
-
-            var ConvertedMessage = (Tools.NetworkData)Tools.Convertor.ByteArrayToObject(e);
-            switch (ConvertedMessage.ComReason)
-            {
-                case Reason.Login:
-                    break;
-                case Reason.Response:
-                    if (((string)ConvertedMessage.Data) == "lgins")
-                    {
-                        mainForm.ShowDialog();
-                        logInBtn.Enabled = false;
-                    }
-                    if (((string)ConvertedMessage.Data) == "lginf")
-                        MessageBox.Show("Wrong password or auth code");
-                    if (((string)ConvertedMessage.Data) == "lginnf")
-                        MessageBox.Show("User not found");
-                    break;
-                case Reason.Com:
-                    break;
-                default:
-                    break;
-            }
+            mainForm.client.Disconnect();            
         }
     }
 }

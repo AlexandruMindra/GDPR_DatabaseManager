@@ -11,8 +11,7 @@ using Tools;
 namespace DbServer
 {
     class Program
-    {
-
+    { 
         #region Events
         public delegate void CommandDelegate(string command);
         public static event CommandDelegate OnCommand;
@@ -22,16 +21,21 @@ namespace DbServer
         #endregion
 
         private static bool ProgramIsRunning = false;
+
+        public static NetConnection server = new NetConnection();
+        public static int port = 55555;
+
         public static Dictionary<String, User> UserDB = new Dictionary<string, User>();
         public static Dictionary<String, String> EmailList = new Dictionary<string, string>();
-        public static int port = 55555;
-        public static NetConnection server = new NetConnection();
+        
         public static StreamWriter LogWriter;
+
+        public static DateTime SavedTime;
 
         public static void LogData(string logString)
         {
             LogWriter = new StreamWriter(GetLogFilePath(), true);
-            LogWriter.WriteLine(DateTime.Now.ToShortDateString() + "/" + DateTime.Now.ToShortTimeString() + " : " + logString);
+            LogWriter.WriteLine(DateTime.Now.ToShortDateString() + "/" + DateTime.Now.ToShortTimeString() + ":" + logString);
             LogWriter.Close();
         }
 
@@ -45,7 +49,7 @@ namespace DbServer
 
             // Console Events <--------------------------------.
             //                                                 |
-            server.OnConnect += server_onConect;//             |
+            server.OnConnect += server_OnConnect;//            |
             server.OnDataReceived += server_OnDataReceived;//  |
             server.OnDisconnect += server_OnDisconnect;//      |
             //                                                 |
@@ -127,7 +131,7 @@ namespace DbServer
                     }
                     break;
 
-                case "create client":
+                case "add user":
                     var newAccount = new User(); // New user to be added
                     goto Start;
 
@@ -195,14 +199,15 @@ namespace DbServer
 
                         }
                     }
+
                 case "help":
 
                     WriteOnColor("================== Help ==================", ConsoleColor.Green , true);
-                    Console.Write("show user                "); WriteOnColor("Show user's details", ConsoleColor.Magenta, true);
-                    Console.Write("list users               "); WriteOnColor("List users from database", ConsoleColor.Magenta, true);
-                    Console.Write("create client            "); WriteOnColor("Create a new client", ConsoleColor.Magenta, true);
-                    Console.Write("show logs                "); WriteOnColor("List the logs", ConsoleColor.Magenta, true);
-                    Console.Write("Exit                     "); WriteOnColor("Exit the application", ConsoleColor.Magenta, true);
+                    Console.Write("show user            "); WriteOnColor("Show user's details", ConsoleColor.Magenta, true);
+                    Console.Write("list users           "); WriteOnColor("List users from database", ConsoleColor.Magenta, true);
+                    Console.Write("add user             "); WriteOnColor("Create a new client", ConsoleColor.Magenta, true);
+                    Console.Write("show logs            "); WriteOnColor("List the logs", ConsoleColor.Magenta, true);
+                    Console.Write("Exit                 "); WriteOnColor("Exit the application", ConsoleColor.Magenta, true);
                     WriteOnColor("==========================================", ConsoleColor.Green, true); 
                     break;
 
@@ -224,9 +229,13 @@ namespace DbServer
             if (command == "Exit" || command == "exit") ProgramIsRunning = false; // Exit Application
         }
 
+        #region ServerEvents
+        private static void server_OnConnect(object sender, NetConnection connection) => LogData(connection.RemoteEndPoint + " connected");
+
         private static void server_OnDisconnect(object sender, NetConnection connection)
-        {
-            LogData("Disconnection from " + connection.RemoteEndPoint);
+        { 
+            LogData(connection.RemoteEndPoint + " disconnected");
+            //connection.Disconnect();
         }
 
         private static void server_OnDataReceived(object sender, NetConnection connection, byte[] e)
@@ -238,15 +247,14 @@ namespace DbServer
 
                     GoogleTOTP tf = new GoogleTOTP();
                     LoginData LoginCredentials = (LoginData)ReceivedData.Data;
-
-                     
+ 
                     if(UserDB.ContainsKey(LoginCredentials.User))
                     {
                         User client = UserDB[LoginCredentials.User];
                         if (client.passwd == LoginCredentials.Password &&
                             tf.GeneratePin(client.code) == LoginCredentials.Code)
                         {
-                            LogData("User " + LoginCredentials.User + " connected");
+                            LogData(connection.RemoteEndPoint + " login as " + LoginCredentials.User);
                             connection.Send(Tools.Convertor.ObjectToByteArray(new Tools.NetworkData()
                             {
                                 ComReason = Tools.Reason.Response,
@@ -255,7 +263,7 @@ namespace DbServer
                         }
                         else
                         {
-                            LogData("User " + LoginCredentials.User + " failed to login");
+                            LogData(connection.RemoteEndPoint + " failed to login as " + LoginCredentials.User);
                             connection.Send(Tools.Convertor.ObjectToByteArray(new Tools.NetworkData()
                             {
                                 ComReason = Tools.Reason.Response,
@@ -265,7 +273,7 @@ namespace DbServer
                     }
                     else
                     {
-                        LogData("User " + LoginCredentials.User + " not found");
+                        LogData(connection.RemoteEndPoint + " user not found " + LoginCredentials.User);
                         connection.Send(Tools.Convertor.ObjectToByteArray(new Tools.NetworkData()
                         {
                             ComReason = Tools.Reason.Response,
@@ -280,40 +288,7 @@ namespace DbServer
                     break;
             }
         }
-
-        private static void server_onConect(object sender, NetConnection connection)
-        {
-            LogData("new connection from " + connection.ToString());
-        }
-        
-        public static void WriteOnColor(string Text, ConsoleColor color, bool Newline)
-        {
-            Console.BackgroundColor = ConsoleColor.Black;
-            Console.ForegroundColor = color;
-            Console.Write(Text);
-            if (Newline) Console.WriteLine();
-            Console.ResetColor();
-        }
-
-        static DateTime SavedTime;
-        public static void SaveDataAsync(int Seconds)
-        {
-            SavedTime = DateTime.Now;
-            new Thread((ThreadStart)(() =>
-            {
-
-                while (ProgramIsRunning)// Writing loop
-                {
-                    if ((DateTime.Now - SavedTime).TotalMilliseconds >= Seconds)
-                    {
-                        SaveData();
-                    }
-                    Thread.Sleep(5);
-                }
-            })).Start();
-        }
-        
-
+        #endregion
 
         public static void AddUser(string acc, string pass, string em, byte[] strKey)
         {
@@ -327,17 +302,7 @@ namespace DbServer
             EmailList.Add(em, acc);
         }
 
-        private static string GetLogFilePath()
-        {
-            return Path.Combine(Environment.GetFolderPath(
-                Environment.SpecialFolder.ApplicationData) + @"\GDPRDatabase", "Log.txt");
-        }
-
-        public static User SearchByEmail(string email)
-        {
-            return UserDB[EmailList[email]];
-        }
-
+        #region Save & Load DataFile Functions
         public static void LoadData()
         {
             var fileName = Path.Combine(Environment.GetFolderPath(
@@ -387,8 +352,47 @@ namespace DbServer
             Writer = null;
             fileName = null;
         }
+
+        public static void SaveDataAsync(int Seconds)
+        {
+            SavedTime = DateTime.Now;
+            new Thread((ThreadStart)(() =>
+            {
+
+                while (ProgramIsRunning)// Writing loop
+                {
+                    if ((DateTime.Now - SavedTime).TotalMilliseconds >= Seconds)
+                    {
+                        SaveData();
+                    }
+                    Thread.Sleep(5);
+                }
+            })).Start();
+        }
+
+        private static string GetLogFilePath()
+        {
+            return Path.Combine(Environment.GetFolderPath(
+                Environment.SpecialFolder.ApplicationData) + @"\GDPRDatabase", "Log.txt");
+        }
+        #endregion
+
+        public static void WriteOnColor(string Text, ConsoleColor color, bool Newline)
+        {
+            Console.BackgroundColor = ConsoleColor.Black;
+            Console.ForegroundColor = color;
+            Console.Write(Text);
+            if (Newline) Console.WriteLine();
+            Console.ResetColor();
+        }
+
+        public static User SearchByEmail(string email)
+        {
+            return UserDB[EmailList[email]];
+        }
     }
 
+    [Serializable]
     public class User
     {
         public String account { get; set; }

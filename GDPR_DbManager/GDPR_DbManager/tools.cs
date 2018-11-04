@@ -2,14 +2,14 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
 using System.Threading.Tasks;
+using System.Runtime.Serialization.Formatters.Binary;
 
 namespace Tools
 {
     [Serializable]
-    public class LoginData
+    public  class LoginData
     {
         public string User { get; set; }
         public string Password { get; set; }
@@ -31,7 +31,7 @@ namespace Tools
         public object Data { get; set; }
     }
 
-    public static class Convertor
+    public class Convertor
     {
         // Convert an Object to a byte array
         public static byte[] ObjectToByteArray(object obj)

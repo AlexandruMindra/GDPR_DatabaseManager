@@ -33,6 +33,7 @@
             this.keyField = new System.Windows.Forms.TextBox();
             this.logInBtn = new System.Windows.Forms.Button();
             this.label1 = new System.Windows.Forms.Label();
+            this.logoutBtn = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // userField
@@ -69,9 +70,9 @@
             // 
             // logInBtn
             // 
-            this.logInBtn.Location = new System.Drawing.Point(28, 160);
+            this.logInBtn.Location = new System.Drawing.Point(121, 158);
             this.logInBtn.Name = "logInBtn";
-            this.logInBtn.Size = new System.Drawing.Size(175, 23);
+            this.logInBtn.Size = new System.Drawing.Size(70, 23);
             this.logInBtn.TabIndex = 3;
             this.logInBtn.Text = "LogIn";
             this.logInBtn.UseVisualStyleBackColor = true;
@@ -89,11 +90,23 @@
             this.label1.Text = "GDPR DbMaster";
             this.label1.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             // 
+            // logoutBtn
+            // 
+            this.logoutBtn.Enabled = false;
+            this.logoutBtn.Location = new System.Drawing.Point(43, 158);
+            this.logoutBtn.Name = "logoutBtn";
+            this.logoutBtn.Size = new System.Drawing.Size(70, 23);
+            this.logoutBtn.TabIndex = 5;
+            this.logoutBtn.Text = "LogOut";
+            this.logoutBtn.UseVisualStyleBackColor = true;
+            this.logoutBtn.Click += new System.EventHandler(this.logoutBtn_Click);
+            // 
             // LogIn
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(231, 204);
+            this.Controls.Add(this.logoutBtn);
             this.Controls.Add(this.label1);
             this.Controls.Add(this.logInBtn);
             this.Controls.Add(this.keyField);
@@ -115,6 +128,7 @@
         private System.Windows.Forms.TextBox keyField;
         private System.Windows.Forms.Button logInBtn;
         private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.Button logoutBtn;
     }
 }
 
