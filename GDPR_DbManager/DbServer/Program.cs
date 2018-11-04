@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Serialization;
 using Tools;
@@ -68,14 +69,89 @@ namespace DbServer
                 case "list clients":
                     foreach (var user in UserDB.Values)
                     {
-                        Console.WriteLine("============= Listing Clients =============" + Environment.NewLine +
-                                          "    User : " + user.account + Environment.NewLine +
-                                          "Password : " + user.email   + Environment.NewLine +
+                        WriteOnColor("--------------------------------", ConsoleColor.Blue, true);
+                        Console.WriteLine("    User : " + user.account + Environment.NewLine +
+                                          "Password : " + user.passwd   + Environment.NewLine +
+                                          "   Email : " + user.email + Environment.NewLine +
                                           "    Code : " + user.code);
                     }
                     break;
-                case "create user":
+                case "create client":
 
+                    var newAccount = new User(); // New user to be added
+                    goto Start;
+
+                    Start:
+                    {
+                        Console.Clear();
+                        WriteOnColor("::: Creating Client :::", ConsoleColor.Green, true);
+                        goto Account;
+                    }
+                    Account:
+                    {
+                        Console.Write("User Name : ");
+                        string Account = Console.ReadLine();
+                        if (UserDB.ContainsKey(Account))
+                        {
+                            WriteOnColor("    User Already Exists!", ConsoleColor.Red, true);
+                            goto Account;
+                        }
+                        else
+                        {
+                            if (Account != "")
+                            {
+                                newAccount.account = Account;
+                                goto Password;
+                            }
+                            else
+                            {
+                                WriteOnColor("    User Name cannot be empty!", ConsoleColor.Red, true);
+                                goto Account;
+                            }
+                        }
+                    }
+                    Password:
+                    {
+                        Console.Write(" Password : ");
+                        string Password = Console.ReadLine();
+                        if (Password != "")
+                        {
+                            newAccount.passwd = Password;
+                            goto Email;
+                        }
+                        else
+                        {
+                            WriteOnColor("    Password cannot be empty!", ConsoleColor.Red, true);
+                            goto Password;
+                        }
+                    }
+                    Email:
+                    {
+                        Console.Write("    Email : ");
+                        string Email = Console.ReadLine();
+                        if (Email != "")
+                        {
+                            GoogleTOTP tf = new GoogleTOTP();
+                            newAccount.email = Email;
+                            newAccount.code = CreativeCommons.Transcoder.Base32Encode(tf.getPrivateKey());
+                            UserDB.Add(newAccount.account, newAccount);
+                            WriteOnColor("Client " + newAccount.account + " was created successfully!", ConsoleColor.Yellow, true);
+                            break;
+                        }
+                        else
+                        {
+                            WriteOnColor("    Email cannot be empty!", ConsoleColor.Red, true);
+                            goto Email;
+
+                        }
+                    }
+                case "help":
+
+                    WriteOnColor("================== Help ==================", ConsoleColor.Green , true);
+                    Console.Write("list clients             "); WriteOnColor("List clients from database", ConsoleColor.Magenta, true);
+                    Console.Write("create client            "); WriteOnColor("Create a new client", ConsoleColor.Magenta, true);
+                    Console.Write("Exit                     "); WriteOnColor("Exit the application", ConsoleColor.Magenta, true);
+                    WriteOnColor("==========================================", ConsoleColor.Green, true); 
                     break;
             }
 
@@ -134,6 +210,23 @@ namespace DbServer
         private static void server_onConect(object sender, NetConnection connection)
         {
             Console.WriteLine("Connection from " + connection.RemoteEndPoint);
+        }
+
+        private static Random random = new Random();
+        public static string RandomString(int length)
+        {
+            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+            return new string(Enumerable.Repeat(chars, length)
+              .Select(s => s[random.Next(s.Length)]).ToArray());
+        }
+
+        public static void WriteOnColor(string Text, ConsoleColor color, bool Newline)
+        {
+            Console.BackgroundColor = ConsoleColor.Black;
+            Console.ForegroundColor = color;
+            Console.Write(Text);
+            if (Newline) Console.WriteLine();
+            Console.ResetColor();
         }
 
         public static void AddUser(string acc, string pass, string em, string strKey)
