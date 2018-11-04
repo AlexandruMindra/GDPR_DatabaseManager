@@ -77,9 +77,9 @@ namespace DbServer
             return result;
         }
 
-        public string GeneratePin(string code)
+        public string GeneratePin(byte[] code)
         {
-            return generateResponseCode(getCurrentInterval(), Encoding.ASCII.GetBytes(code));
+            return generateResponseCode(getCurrentInterval(), code);
         }
 
         public string randomString()

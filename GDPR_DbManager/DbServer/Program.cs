@@ -167,12 +167,16 @@ namespace DbServer
             switch (ReceivedData.ComReason)
             {
                 case Reason.Login:
-                    try
+
+                    GoogleTOTP tf = new GoogleTOTP();
+                    LoginData LoginCredentials = (LoginData)ReceivedData.Data;
+
+                     
+                    if(UserDB.ContainsKey(LoginCredentials.User))
                     {
-                        GoogleTOTP tf = new GoogleTOTP();
-                        LoginData LoginCredentials = (LoginData)ReceivedData.Data;
                         User client = UserDB[LoginCredentials.User];
-                        if (client.passwd == LoginCredentials.Password)
+                        if (client.passwd == LoginCredentials.Password &&
+                            tf.GeneratePin(client.code) == LoginCredentials.Code)
                         {
                             Console.WriteLine("User " + LoginCredentials.User + " connected");
                             connection.Send(Tools.Convertor.ObjectToByteArray(new Tools.NetworkData()
@@ -190,12 +194,17 @@ namespace DbServer
                                 Data = "lginf"
                             }));
                         }
-                        break;
                     }
-                    catch (Exception ex)
+                    else
                     {
-                        Console.WriteLine(ex.ToString());
+                        Console.WriteLine("User " + LoginCredentials.User + " not found");
+                        connection.Send(Tools.Convertor.ObjectToByteArray(new Tools.NetworkData()
+                        {
+                            ComReason = Tools.Reason.Response,
+                            Data = "lginnf"
+                        }));
                     }
+                        
                     break;
 
                 case Reason.Com:
