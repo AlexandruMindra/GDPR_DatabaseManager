@@ -26,13 +26,21 @@ namespace DbServer
         public static Dictionary<String, String> EmailList = new Dictionary<string, string>();
         public static int port = 55555;
         public static NetConnection server = new NetConnection();
+        public static StreamWriter LogWriter;
+
+        public static void LogData(string logString)
+        {
+            LogWriter = new StreamWriter(GetLogFilePath(), true);
+            LogWriter.WriteLine(DateTime.Now.ToShortDateString() + "/" + DateTime.Now.ToShortTimeString() + " : " + logString);
+            LogWriter.Close();
+        }
 
         static void Main(string[] args)
-        {
-
+        {   
             // Startup <---------------------------------------.
             ProgramIsRunning = true;//                         |
             LoadData();//                                      |
+            SaveDataAsync(5);//                                |
             //  <----------------------------------------------'
 
             // Console Events <--------------------------------.
@@ -44,12 +52,13 @@ namespace DbServer
             OnCommand += Program_OnCommand;//                  |
             OnClosing += Program_OnClosing;//                  |
             // <-----------------------------------------------'
+
             server.Start(port);
             
             // Command Loop <----------------------------------.
             while (ProgramIsRunning)//                         |
             {//                                                |
-                Console.Write(">");//           |
+                WriteOnColor(">>", ConsoleColor.Yellow, false);
                 OnCommand(Console.ReadLine());//               |
             }//                                                |
             //  <----------------------------------------------'
@@ -59,20 +68,61 @@ namespace DbServer
 
         private static void Program_OnClosing()
         {
-            // On Program Closing
-
+            SaveData();
         }
 
         private static void Program_OnCommand(string command)
         {
             switch (command)
             {
-                case "list clients":
+                case "show user":
+
+                    User cl = new User();
+                    GetName:
+                    {
+                        WriteOnColor("Enter User Name : ", ConsoleColor.Blue, false);
+                        string userName = Console.ReadLine();
+
+                        if (userName == ">exit")
+                        {
+                            break;
+                        }
+                        else if (userName != "")
+                        {
+                            if (UserDB.ContainsKey(userName))
+                            {
+                                cl = UserDB[userName];
+                                goto ShowUser;
+                            }
+                            else
+                            {
+                                WriteOnColor("  User not found!", ConsoleColor.Red, true);
+                                goto GetName;
+                            }
+                            
+                        }
+                        else if(userName == "")
+                        {
+                            WriteOnColor("  User name cannot be empty!", ConsoleColor.Red, true);
+                            goto GetName;
+                        }
+                    }
+                    ShowUser:
+                    {
+
+                        WriteOnColor("  ::: User Details :::", ConsoleColor.Yellow, true);
+                        Console.WriteLine("      User : " + cl.account + Environment.NewLine +
+                                          "  Password : " + cl.passwd + Environment.NewLine +
+                                          "     Email : " + cl.email + Environment.NewLine +
+                                          "Privat Key : " + CreativeCommons.Transcoder.Base32Encode(cl.code));
+                    }
+                    
+                    break;
+                case "list users":
                     foreach (var user in UserDB.Values)
                     {
                         WriteOnColor("--------------------------------", ConsoleColor.Blue, true);
                         Console.WriteLine("    User : " + user.account + Environment.NewLine +
-                                          "Password : " + user.passwd   + Environment.NewLine +
                                           "   Email : " + user.email + Environment.NewLine);
                     }
                     break;
@@ -148,7 +198,8 @@ namespace DbServer
                 case "help":
 
                     WriteOnColor("================== Help ==================", ConsoleColor.Green , true);
-                    Console.Write("list clients             "); WriteOnColor("List clients from database", ConsoleColor.Magenta, true);
+                    Console.Write("show user                "); WriteOnColor("Show user's details", ConsoleColor.Magenta, true);
+                    Console.Write("list users             "); WriteOnColor("List users from database", ConsoleColor.Magenta, true);
                     Console.Write("create client            "); WriteOnColor("Create a new client", ConsoleColor.Magenta, true);
                     Console.Write("Exit                     "); WriteOnColor("Exit the application", ConsoleColor.Magenta, true);
                     WriteOnColor("==========================================", ConsoleColor.Green, true); 
@@ -164,7 +215,7 @@ namespace DbServer
 
         private static void server_OnDisconnect(object sender, NetConnection connection)
         {
-            Console.WriteLine("Disconnection from " + connection.RemoteEndPoint);
+            LogData("Disconnection from " + connection.RemoteEndPoint);
         }
 
         private static void server_OnDataReceived(object sender, NetConnection connection, byte[] e)
@@ -184,7 +235,7 @@ namespace DbServer
                         if (client.passwd == LoginCredentials.Password &&
                             tf.GeneratePin(client.code) == LoginCredentials.Code)
                         {
-                            Console.WriteLine("User " + LoginCredentials.User + " connected");
+                            LogData("User " + LoginCredentials.User + " connected");
                             connection.Send(Tools.Convertor.ObjectToByteArray(new Tools.NetworkData()
                             {
                                 ComReason = Tools.Reason.Response,
@@ -193,7 +244,7 @@ namespace DbServer
                         }
                         else
                         {
-                            Console.WriteLine("User " + LoginCredentials.User + " failed to login");
+                            LogData("User " + LoginCredentials.User + " failed to login");
                             connection.Send(Tools.Convertor.ObjectToByteArray(new Tools.NetworkData()
                             {
                                 ComReason = Tools.Reason.Response,
@@ -203,7 +254,7 @@ namespace DbServer
                     }
                     else
                     {
-                        Console.WriteLine("User " + LoginCredentials.User + " not found");
+                        LogData("User " + LoginCredentials.User + " not found");
                         connection.Send(Tools.Convertor.ObjectToByteArray(new Tools.NetworkData()
                         {
                             ComReason = Tools.Reason.Response,
@@ -222,17 +273,9 @@ namespace DbServer
 
         private static void server_onConect(object sender, NetConnection connection)
         {
-            Console.WriteLine("Connection from " + connection.RemoteEndPoint);
+            LogData("new connection from " + connection.ToString());
         }
-
-        private static Random random = new Random();
-        public static string RandomString(int length)
-        {
-            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-            return new string(Enumerable.Repeat(chars, length)
-              .Select(s => s[random.Next(s.Length)]).ToArray());
-        }
-
+        
         public static void WriteOnColor(string Text, ConsoleColor color, bool Newline)
         {
             Console.BackgroundColor = ConsoleColor.Black;
@@ -241,6 +284,26 @@ namespace DbServer
             if (Newline) Console.WriteLine();
             Console.ResetColor();
         }
+
+        static DateTime SavedTime;
+        public static void SaveDataAsync(int Seconds)
+        {
+            SavedTime = DateTime.Now;
+            new Thread((ThreadStart)(() =>
+            {
+
+                while (ProgramIsRunning)// Writing loop
+                {
+                    if ((DateTime.Now - SavedTime).TotalMilliseconds >= Seconds)
+                    {
+                        SaveData();
+                    }
+                    Thread.Sleep(5);
+                }
+            })).Start();
+        }
+        
+
 
         public static void AddUser(string acc, string pass, string em, byte[] strKey)
         {
@@ -252,6 +315,12 @@ namespace DbServer
                 code = strKey
             });
             EmailList.Add(em, acc);
+        }
+
+        private static string GetLogFilePath()
+        {
+            return Path.Combine(Environment.GetFolderPath(
+                Environment.SpecialFolder.ApplicationData) + @"\GDPRDatabase", "Log.txt");
         }
 
         public static User SearchByEmail(string email)
