@@ -11,6 +11,16 @@ namespace DbServer
 {
     class Program
     {
+
+        #region Events
+        public delegate void CommandDelegate(string command);
+        public static event CommandDelegate OnCommand;
+
+        public delegate void ClosingDelegate();
+        public static event ClosingDelegate OnClosing;
+        #endregion
+
+        private static bool ProgramIsRunning = false;
         public static Dictionary<String, User> UserDB = new Dictionary<string, User>();
         public static Dictionary<String, String> EmailList = new Dictionary<string, string>();
         public static int port = 55555;
@@ -18,17 +28,58 @@ namespace DbServer
 
         static void Main(string[] args)
         {
-            LoadData();
-            server.OnConnect += server_onConect;
-            server.OnDataReceived += server_OnDataReceived;
-            server.OnDisconnect += server_OnDisconnect;
 
+            // Startup <---------------------------------------.
+            ProgramIsRunning = true;//                         |
+            LoadData();//                                      |
+            //  <----------------------------------------------'
+
+            // Console Events <--------------------------------.
+            //                                                 |
+            server.OnConnect += server_onConect;//             |
+            server.OnDataReceived += server_OnDataReceived;//  |
+            server.OnDisconnect += server_OnDisconnect;//      |
+            //                                                 |
+            OnCommand += Program_OnCommand;//                  |
+            OnClosing += Program_OnClosing;//                  |
+            // <-----------------------------------------------'
             server.Start(port);
-            Console.WriteLine("Server start on port " + port);
+            
+            // Command Loop <----------------------------------.
+            while (ProgramIsRunning)//                         |
+            {//                                                |
+                Console.Write("Enter Command : ");//           |
+                OnCommand(Console.ReadLine());//               |
+            }//                                                |
+            //  <----------------------------------------------'
 
-            Console.ReadLine();
-            SaveData();
+            OnClosing();
+        }
 
+        private static void Program_OnClosing()
+        {
+            // On Program Closing
+        }
+
+        private static void Program_OnCommand(string command)
+        {
+            switch (command)
+            {
+                case "list clients":
+                    foreach (var user in UserDB.Values)
+                    {
+                        Console.WriteLine("============= Listing Clients =============" + Environment.NewLine +
+                                          "    User : " + user.account + Environment.NewLine +
+                                          "Password : " + user.email   + Environment.NewLine +
+                                          "    Code : " + user.code);
+                    }
+                    break;
+                case "create user":
+
+                    break;
+            }
+
+            if (command == "Exit" || command == "exit") ProgramIsRunning = false; // Exit Application
         }
 
         private static void server_OnDisconnect(object sender, NetConnection connection)
