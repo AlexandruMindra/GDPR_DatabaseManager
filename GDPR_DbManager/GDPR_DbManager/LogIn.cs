@@ -96,9 +96,6 @@ namespace GDPR_DbManager
                 default:
                     break;
             }
-
-            
-
         }
     }
 }
