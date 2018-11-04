@@ -91,6 +91,7 @@ namespace GDPR_DbManager
                     if (((string)ConvertedMessage.Data) == "lgins")
                     {
                         mainForm.ShowDialog();
+                        logInBtn.Enabled = false;
                     }
                     if (((string)ConvertedMessage.Data) == "lginf")
                         MessageBox.Show("Wrong password or auth code");

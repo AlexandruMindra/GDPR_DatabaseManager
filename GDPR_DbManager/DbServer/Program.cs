@@ -49,7 +49,7 @@ namespace DbServer
             // Command Loop <----------------------------------.
             while (ProgramIsRunning)//                         |
             {//                                                |
-                Console.Write("Enter Command : ");//           |
+                Console.Write(">");//           |
                 OnCommand(Console.ReadLine());//               |
             }//                                                |
             //  <----------------------------------------------'
@@ -60,6 +60,7 @@ namespace DbServer
         private static void Program_OnClosing()
         {
             // On Program Closing
+
         }
 
         private static void Program_OnCommand(string command)
@@ -75,6 +76,7 @@ namespace DbServer
                                           "   Email : " + user.email + Environment.NewLine);
                     }
                     break;
+
                 case "create client":
                     var newAccount = new User(); // New user to be added
                     goto Start;
@@ -150,6 +152,10 @@ namespace DbServer
                     Console.Write("create client            "); WriteOnColor("Create a new client", ConsoleColor.Magenta, true);
                     Console.Write("Exit                     "); WriteOnColor("Exit the application", ConsoleColor.Magenta, true);
                     WriteOnColor("==========================================", ConsoleColor.Green, true); 
+                    break;
+
+                default:
+                    
                     break;
             }
 
