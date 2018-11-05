@@ -29,7 +29,7 @@ namespace DbServer
         public static Dictionary<String, User> UserDB = new Dictionary<string, User>();
         public static Dictionary<String, String> EmailList = new Dictionary<string, string>();
         
-        public static StreamWriter LogWriter;
+        
         public static DateTime SavedTime;
         public static ConcurrentBag<string> LogsList = new ConcurrentBag<string>();
         public static bool WannaReadLogs = false;
@@ -39,37 +39,49 @@ namespace DbServer
             {
                 while (ProgramIsRunning)
                 {
-                    if (WannaReadLogs)
+                    try
                     {
-                        using (var reader = new StreamReader(GetLogFilePath(), true))
+                        if (!Tools.General.IsFileLocked(new FileInfo(GetLogFilePath())))
                         {
-                            string line;
-                            while ((line = reader.ReadLine()) != null)
+                            if (WannaReadLogs)
                             {
-                                WriteOnColor(line, ConsoleColor.DarkGreen, true);
+                                using (var reader = new StreamReader(GetLogFilePath(), true))
+                                {
+                                    string line;
+                                    while ((line = reader.ReadLine()) != null)
+                                    {
+                                        WriteOnColor(line, ConsoleColor.DarkGreen, true);
+                                    }
+                                }
+                                WannaReadLogs = false;
                             }
+                            if (!LogsList.IsEmpty)
+                            {
+                                try
+                                {
+                                    while (LogsList.TryTake(out string logString))
+                                    {
+
+                                        File.AppendAllText(GetLogFilePath(),
+                                            DateTime.Now.ToShortDateString() + "/" +
+                                            DateTime.Now.ToShortTimeString() + ":" +
+                                            logString + Environment.NewLine);
+
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    Console.WriteLine(ex.ToString());
+                                }
+                            }
+                            Thread.Sleep(1);
                         }
-                        WannaReadLogs = false;
                     }
-                    if (!LogsList.IsEmpty)
+                    catch (Exception ex)
                     {
-                        try
-                        {
-                            while (LogsList.TryTake(out string logString))
-                            {
-                                LogWriter = new StreamWriter(GetLogFilePath(), true); // Open Stream
-                                LogWriter.WriteLine(DateTime.Now.ToShortDateString() + "/" + DateTime.Now.ToShortTimeString() + ":" + logString);
-                            }
-                            // Close stream
-                            LogWriter.Close();
-                            LogWriter.Dispose();
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine(ex.ToString());
-                        }
+                        Console.WriteLine(ex.ToString());
                     }
-                    Thread.Sleep(1);
+                    
                 }
             })).Start();
         }
@@ -81,6 +93,10 @@ namespace DbServer
 
         static void Main(string[] args)
         {
+
+            if (!File.Exists(GetLogFilePath()))
+                File.Create(GetLogFilePath());
+
             // Startup <---------------------------------------.
             ProgramIsRunning = true;//                         |
             LoadData();//                                      |
@@ -402,13 +418,15 @@ namespace DbServer
                 {
                     if ((DateTime.Now - SavedTime).TotalMilliseconds >= Seconds)
                     {
-                        SaveData();
+                        if(UserDB.Count > 0)
+                            SaveData();
                     }
                     if (SaveAndExit)
                     {
-                        SaveData();
+                        if (UserDB.Count > 0)
+                            SaveData();
                         ProgramIsRunning = false;
-                        SaveAndExit = false;
+                        Environment.Exit(0);
                     }
                     Thread.Sleep(10);
                 }
@@ -438,7 +456,6 @@ namespace DbServer
     }
 
     [Serializable]
-    [XmlRoot(ElementName = "User", Namespace = "http://www.w3.org/2003/05/soap-envelope")]
     public class User
     {
         public String account { get; set; }
