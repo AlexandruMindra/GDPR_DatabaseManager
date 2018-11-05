@@ -47,6 +47,7 @@ namespace GDPR_DbManager
 
         private void Client_OnDataReceived(object sender, NetConnection connection, byte[] e)
         {
+            Console.WriteLine("msg length " + e.Length + " Bytes");
             var ConvertedMessage = (Tools.NetworkData)Tools.Convertor.ByteArrayToObject(e);
             switch (ConvertedMessage.ComReason)
             {

@@ -36,6 +36,7 @@ namespace Tools
         // Convert an Object to a byte array
         public static byte[] ObjectToByteArray(object obj)
         {
+
             if (obj == null)
                 return null;
             BinaryFormatter bf = new BinaryFormatter();
@@ -44,6 +45,7 @@ namespace Tools
                 bf.Serialize(ms, obj);
                 return ms.ToArray();
             }
+
         }
 
         // Convert a byte array to an Object

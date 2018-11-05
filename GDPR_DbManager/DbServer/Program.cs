@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -30,22 +31,25 @@ namespace DbServer
         
         public static StreamWriter LogWriter;
         public static DateTime SavedTime;
-        public static string LogString;
+        public static ConcurrentBag<string> LogsList = new ConcurrentBag<string>();
         public static void StartLogging()
         {
             new Thread((ThreadStart)(() =>
             {
                 while (ProgramIsRunning)
                 {
-                    if(LogString != null)
+                    if(!LogsList.IsEmpty)
                     {
                         try
                         {
-                            LogWriter = new StreamWriter(GetLogFilePath(), true);
-                            LogWriter.WriteLine(DateTime.Now.ToShortDateString() + "/" + DateTime.Now.ToShortTimeString() + ":" + LogString);
+                            while (LogsList.TryTake(out string logString))
+                            {
+                                LogWriter = new StreamWriter(GetLogFilePath(), true); // Open Stream
+                                LogWriter.WriteLine(DateTime.Now.ToShortDateString() + "/" + DateTime.Now.ToShortTimeString() + ":" + logString);
+                            }
+                            // Close stream
                             LogWriter.Close();
                             LogWriter.Dispose();
-                            LogString = null;
                         }
                         catch (Exception ex)
                         {
@@ -59,7 +63,7 @@ namespace DbServer
 
         public static void LogData(string logString)
         {
-            LogString = logString;
+            LogsList.Add(logString);
         }
 
         static void Main(string[] args)
@@ -83,14 +87,14 @@ namespace DbServer
 
             server.Start(port);
 
-            // Command Loop <----------------------------------.
-            while (ProgramIsRunning)//                         |
-            {//                                                |
-                WriteOnColor(">>", ConsoleColor.Yellow, false);
-                OnCommand(Console.ReadLine());//               |
-            }//                                                |
-             //  <----------------------------------------------'
-
+            // Command Loop <--------------------------------------.
+            while (ProgramIsRunning)//                             |
+            {//                                                    |
+                WriteOnColor(">>", ConsoleColor.Yellow, false);//  |
+                OnCommand(Console.ReadLine());//                   |
+            }//                                                    |
+             //  <-------------------------------------------------'
+            
             OnClosing();
         }
 
@@ -250,7 +254,10 @@ namespace DbServer
                     break;
             }
 
-            if (command == "Exit" || command == "exit") ProgramIsRunning = false; // Exit Application
+            if (command == "Exit" || command == "exit")
+            {
+                SaveAndExit = true; // Save and exit
+            }
         }
 
         #region ServerEvents
@@ -378,9 +385,11 @@ namespace DbServer
             fileName = null;
         }
 
+        private static bool SaveAndExit = false;
         public static void SaveDataAsync(int Seconds)
         {
             SavedTime = DateTime.Now;
+            
             new Thread((ThreadStart)(() =>
             {
 
@@ -390,7 +399,13 @@ namespace DbServer
                     {
                         SaveData();
                     }
-                    Thread.Sleep(5);
+                    if (SaveAndExit)
+                    {
+                        SaveData();
+                        ProgramIsRunning = false;
+                        SaveAndExit = false;
+                    }
+                    Thread.Sleep(10);
                 }
             })).Start();
         }
@@ -418,6 +433,7 @@ namespace DbServer
     }
 
     [Serializable]
+    [XmlRoot(ElementName = "Envelope", Namespace = "http://www.w3.org/2003/05/soap-envelope")]
     public class User
     {
         public String account { get; set; }

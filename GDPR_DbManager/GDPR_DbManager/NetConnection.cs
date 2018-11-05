@@ -165,7 +165,7 @@ namespace GDPR_DbManager
                 while (client.client.Connected)
                 {
                     int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
-                    if (bytesRead > 0)
+                    if (bytesRead != 0)
                     {
                         ms.Write(buffer, 0, bytesRead);
                         if (!stream.DataAvailable)
