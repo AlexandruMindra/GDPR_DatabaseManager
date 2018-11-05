@@ -104,18 +104,15 @@ namespace GDPR_DbManager
 
         private void CallOnDataReceived(NetConnection connection, byte[] data)
         {
-            if (OnDataReceived != null)
-                OnDataReceived(this, connection, data);
+            OnDataReceived?.Invoke(this, connection, data);
         }
         private void CallOnConnect(NetConnection client)
         {
-            if (OnConnect != null)
-                OnConnect(this, client);
+            OnConnect?.Invoke(this, client);
         }
         private void CallOnDisconnect(NetConnection client)
         {
-            if (OnDisconnect != null)
-                OnDisconnect(this, client);
+            OnDisconnect?.Invoke(this, client);
         }
 
         private void CheckServerUsedAsClient()
@@ -168,12 +165,15 @@ namespace GDPR_DbManager
                 while (client.client.Connected)
                 {
                     int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
-                    ms.Write(buffer, 0, bytesRead);
-                    if (!stream.DataAvailable)
+                    if (bytesRead > 0)
                     {
-                        CallOnDataReceived(client, ms.ToArray());
-                        ms.Seek(0, SeekOrigin.Begin);
-                        ms.SetLength(0);
+                        ms.Write(buffer, 0, bytesRead);
+                        if (!stream.DataAvailable)
+                        {
+                            CallOnDataReceived(client, ms.ToArray());
+                            ms.Seek(0, SeekOrigin.Begin);
+                            ms.SetLength(0);
+                        }
                     }
                 }
                 CallOnDisconnect(client);

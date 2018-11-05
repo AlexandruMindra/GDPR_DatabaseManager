@@ -29,22 +29,46 @@ namespace DbServer
         public static Dictionary<String, String> EmailList = new Dictionary<string, string>();
         
         public static StreamWriter LogWriter;
-
         public static DateTime SavedTime;
+        public static string LogString;
+        public static void StartLogging()
+        {
+            new Thread((ThreadStart)(() =>
+            {
+                while (ProgramIsRunning)
+                {
+                    if(LogString != null)
+                    {
+                        try
+                        {
+                            LogWriter = new StreamWriter(GetLogFilePath(), true);
+                            LogWriter.WriteLine(DateTime.Now.ToShortDateString() + "/" + DateTime.Now.ToShortTimeString() + ":" + LogString);
+                            LogWriter.Close();
+                            LogWriter.Dispose();
+                            LogString = null;
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine(ex.ToString());
+                        }
+                    }
+                    Thread.Sleep(1);
+                }
+            })).Start();
+        }
 
         public static void LogData(string logString)
         {
-            LogWriter = new StreamWriter(GetLogFilePath(), true);
-            LogWriter.WriteLine(DateTime.Now.ToShortDateString() + "/" + DateTime.Now.ToShortTimeString() + ":" + logString);
-            LogWriter.Close();
+            LogString = logString;
         }
 
         static void Main(string[] args)
-        {   
+        {
             // Startup <---------------------------------------.
             ProgramIsRunning = true;//                         |
             LoadData();//                                      |
             SaveDataAsync(5);//                                |
+            StartLogging();//                                  |
             //  <----------------------------------------------'
 
             // Console Events <--------------------------------.
@@ -52,20 +76,20 @@ namespace DbServer
             server.OnConnect += server_OnConnect;//            |
             server.OnDataReceived += server_OnDataReceived;//  |
             server.OnDisconnect += server_OnDisconnect;//      |
-            //                                                 |
+                                                       //      |
             OnCommand += Program_OnCommand;//                  |
             OnClosing += Program_OnClosing;//                  |
             // <-----------------------------------------------'
 
             server.Start(port);
-            
+
             // Command Loop <----------------------------------.
             while (ProgramIsRunning)//                         |
             {//                                                |
                 WriteOnColor(">>", ConsoleColor.Yellow, false);
                 OnCommand(Console.ReadLine());//               |
             }//                                                |
-            //  <----------------------------------------------'
+             //  <----------------------------------------------'
 
             OnClosing();
         }
@@ -244,17 +268,18 @@ namespace DbServer
             switch (ReceivedData.ComReason)
             {
                 case Reason.Login:
-
                     GoogleTOTP tf = new GoogleTOTP();
                     LoginData LoginCredentials = (LoginData)ReceivedData.Data;
  
                     if(UserDB.ContainsKey(LoginCredentials.User))
                     {
+                        Console.WriteLine("Stage 1");
                         User client = UserDB[LoginCredentials.User];
-                        if (client.passwd == LoginCredentials.Password &&
-                            tf.GeneratePin(client.code) == LoginCredentials.Code)
+                        if (client.passwd == LoginCredentials.Password) //  && tf.GeneratePin(client.code) == LoginCredentials.Code
                         {
+                            Console.WriteLine("Stage 2");
                             LogData(connection.RemoteEndPoint + " login as " + LoginCredentials.User);
+                            Console.WriteLine("Stage 3");
                             connection.Send(Tools.Convertor.ObjectToByteArray(new Tools.NetworkData()
                             {
                                 ComReason = Tools.Reason.Response,

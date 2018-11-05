@@ -58,6 +58,7 @@ namespace GDPR_DbManager
                         logInBtn.Enabled = false;
                         logoutBtn.Enabled = true;
                         //mainForm.ShowDialog();
+                        MessageBox.Show("Login successfull");
                     }
                     if (((string)ConvertedMessage.Data) == "lginf")
                         MessageBox.Show("Wrong password or auth code");

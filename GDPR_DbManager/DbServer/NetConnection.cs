@@ -70,9 +70,17 @@ namespace DbServer
         }
         public void Disconnect()
         {
-            CheckServerUsedAsClient();
-            CallOnDisconnect(this);
-            client.Close();
+            try
+            {
+                CheckServerUsedAsClient();
+                CallOnDisconnect(this);
+                client.Close();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
+            }
+            
         }
 
         public void Start(int port)
