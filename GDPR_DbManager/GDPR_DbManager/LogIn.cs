@@ -47,29 +47,31 @@ namespace GDPR_DbManager
 
         private void Client_OnDataReceived(object sender, NetConnection connection, byte[] e)
         {
-            Console.WriteLine("msg length " + e.Length + " Bytes");
-            var ConvertedMessage = (Tools.NetworkData)Tools.Convertor.ByteArrayToObject(e);
-            switch (ConvertedMessage.ComReason)
+            if (e.Length > 0)
             {
-                case Reason.Login:
-                    break;
-                case Reason.Response:
-                    if (((string)ConvertedMessage.Data) == "lgins")
-                    {
-                        logInBtn.Enabled = false;
-                        logoutBtn.Enabled = true;
-                        //mainForm.ShowDialog();
-                        MessageBox.Show("Login successfull");
-                    }
-                    if (((string)ConvertedMessage.Data) == "lginf")
-                        MessageBox.Show("Wrong password or auth code");
-                    if (((string)ConvertedMessage.Data) == "lginnf")
-                        MessageBox.Show("User not found");
-                    break;
-                case Reason.Com:
-                    break;
-                default:
-                    break;
+                var ConvertedMessage = (Tools.NetworkData)Tools.Convertor.ByteArrayToObject(e);
+                switch (ConvertedMessage.ComReason)
+                {
+                    case Reason.Login:
+                        break;
+                    case Reason.Response:
+                        if (((string)ConvertedMessage.Data) == "lgins")
+                        {
+                            logInBtn.Enabled = false;
+                            logoutBtn.Enabled = true;
+                            //mainForm.ShowDialog();
+                            MessageBox.Show("Login successfull");
+                        }
+                        if (((string)ConvertedMessage.Data) == "lginf")
+                            MessageBox.Show("Wrong password or auth code");
+                        if (((string)ConvertedMessage.Data) == "lginnf")
+                            MessageBox.Show("User not found");
+                        break;
+                    case Reason.Com:
+                        break;
+                    default:
+                        break;
+                }
             }
         }
         #endregion

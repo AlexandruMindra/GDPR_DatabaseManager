@@ -32,13 +32,26 @@ namespace DbServer
         public static StreamWriter LogWriter;
         public static DateTime SavedTime;
         public static ConcurrentBag<string> LogsList = new ConcurrentBag<string>();
+        public static bool WannaReadLogs = false;
         public static void StartLogging()
         {
             new Thread((ThreadStart)(() =>
             {
                 while (ProgramIsRunning)
                 {
-                    if(!LogsList.IsEmpty)
+                    if (WannaReadLogs)
+                    {
+                        using (var reader = new StreamReader(GetLogFilePath(), true))
+                        {
+                            string line;
+                            while ((line = reader.ReadLine()) != null)
+                            {
+                                WriteOnColor(line, ConsoleColor.DarkGreen, true);
+                            }
+                        }
+                        WannaReadLogs = false;
+                    }
+                    if (!LogsList.IsEmpty)
                     {
                         try
                         {
@@ -94,7 +107,7 @@ namespace DbServer
                 OnCommand(Console.ReadLine());//                   |
             }//                                                    |
              //  <-------------------------------------------------'
-            
+
             OnClosing();
         }
 
@@ -240,14 +253,7 @@ namespace DbServer
                     break;
 
                 case "show logs":
-                    using (var reader = new StreamReader(GetLogFilePath(), true))
-                    {
-                        string line;
-                        while ((line = reader.ReadLine()) != null)
-                        {
-                            WriteOnColor(line, ConsoleColor.DarkGreen, true);
-                        }
-                    }
+                    WannaReadLogs = true;
                     break;
                 default:
                     
@@ -266,58 +272,57 @@ namespace DbServer
         private static void server_OnDisconnect(object sender, NetConnection connection)
         { 
             LogData(connection.RemoteEndPoint + " disconnected");
-            //connection.Disconnect();
         }
 
         private static void server_OnDataReceived(object sender, NetConnection connection, byte[] e)
         {
-            NetworkData ReceivedData = (NetworkData)Convertor.ByteArrayToObject(e);
-            switch (ReceivedData.ComReason)
+            if (e.Length > 0)
             {
-                case Reason.Login:
-                    GoogleTOTP tf = new GoogleTOTP();
-                    LoginData LoginCredentials = (LoginData)ReceivedData.Data;
- 
-                    if(UserDB.ContainsKey(LoginCredentials.User))
-                    {
-                        Console.WriteLine("Stage 1");
-                        User client = UserDB[LoginCredentials.User];
-                        if (client.passwd == LoginCredentials.Password) //  && tf.GeneratePin(client.code) == LoginCredentials.Code
+                NetworkData ReceivedData = (NetworkData)Convertor.ByteArrayToObject(e);
+                switch (ReceivedData.ComReason)
+                {
+                    case Reason.Login:
+                        GoogleTOTP tf = new GoogleTOTP();
+                        LoginData LoginCredentials = (LoginData)ReceivedData.Data;
+
+                        if (UserDB.ContainsKey(LoginCredentials.User))
                         {
-                            Console.WriteLine("Stage 2");
-                            LogData(connection.RemoteEndPoint + " login as " + LoginCredentials.User);
-                            Console.WriteLine("Stage 3");
-                            connection.Send(Tools.Convertor.ObjectToByteArray(new Tools.NetworkData()
+                            User client = UserDB[LoginCredentials.User];
+                            if (client.passwd == LoginCredentials.Password) //  && tf.GeneratePin(client.code) == LoginCredentials.Code
                             {
-                                ComReason = Tools.Reason.Response,
-                                Data = "lgins"
-                            }));
+                                LogData(connection.RemoteEndPoint + " login as " + LoginCredentials.User);
+                                connection.Send(Tools.Convertor.ObjectToByteArray(new Tools.NetworkData()
+                                {
+                                    ComReason = Tools.Reason.Response,
+                                    Data = "lgins"
+                                }));
+                            }
+                            else
+                            {
+                                LogData(connection.RemoteEndPoint + " failed to login as " + LoginCredentials.User);
+                                connection.Send(Tools.Convertor.ObjectToByteArray(new Tools.NetworkData()
+                                {
+                                    ComReason = Tools.Reason.Response,
+                                    Data = "lginf"
+                                }));
+                            }
                         }
                         else
                         {
-                            LogData(connection.RemoteEndPoint + " failed to login as " + LoginCredentials.User);
+                            LogData(connection.RemoteEndPoint + " user not found " + LoginCredentials.User);
                             connection.Send(Tools.Convertor.ObjectToByteArray(new Tools.NetworkData()
                             {
                                 ComReason = Tools.Reason.Response,
-                                Data = "lginf"
+                                Data = "lginnf"
                             }));
                         }
-                    }
-                    else
-                    {
-                        LogData(connection.RemoteEndPoint + " user not found " + LoginCredentials.User);
-                        connection.Send(Tools.Convertor.ObjectToByteArray(new Tools.NetworkData()
-                        {
-                            ComReason = Tools.Reason.Response,
-                            Data = "lginnf"
-                        }));
-                    }
-                    break;
+                        break;
 
-                case Reason.Com:
-                    break;
-                default:
-                    break;
+                    case Reason.Com:
+                        break;
+                    default:
+                        break;
+                }
             }
         }
         #endregion
@@ -433,7 +438,7 @@ namespace DbServer
     }
 
     [Serializable]
-    [XmlRoot(ElementName = "Envelope", Namespace = "http://www.w3.org/2003/05/soap-envelope")]
+    [XmlRoot(ElementName = "User", Namespace = "http://www.w3.org/2003/05/soap-envelope")]
     public class User
     {
         public String account { get; set; }

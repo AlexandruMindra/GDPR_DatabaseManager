@@ -37,8 +37,8 @@ namespace Tools
         public static byte[] ObjectToByteArray(object obj)
         {
 
-            if (obj == null)
-                return null;
+            //if (obj == null)
+            //    return null;
             BinaryFormatter bf = new BinaryFormatter();
             using (MemoryStream ms = new MemoryStream())
             {
@@ -51,11 +51,15 @@ namespace Tools
         // Convert a byte array to an Object
         public static object ByteArrayToObject(byte[] arrBytes)
         {
-            MemoryStream memStream = new MemoryStream();
-            BinaryFormatter binForm = new BinaryFormatter();
-            memStream.Write(arrBytes, 0, arrBytes.Length);
-            memStream.Seek(0, SeekOrigin.Begin);
-            return binForm.Deserialize(memStream);
+            if (arrBytes.Length > 0)
+            {
+                MemoryStream memStream = new MemoryStream();
+                BinaryFormatter binForm = new BinaryFormatter();
+                memStream.Write(arrBytes, 0, arrBytes.Length);
+                memStream.Seek(0, SeekOrigin.Begin);
+                return binForm.Deserialize(memStream);
+            }
+            return null;
         }
     }
 }
